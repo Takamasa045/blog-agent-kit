@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "blog-agent-kit"
+version = "0.1.0"
+description = "Local-first blog article generation workspace for Codex and Claude"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Blog Agent Kit contributors" }]
+keywords = ["agents", "codex", "claude", "blog", "article", "writing", "markdown"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Topic :: Text Processing :: Markup :: Markdown",
+  "Topic :: Utilities",
+]
+dependencies = []
+
+[project.scripts]
+blog-agent = "blog_agent_kit.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
