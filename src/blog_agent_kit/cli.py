@@ -18,6 +18,8 @@ REQUIRED_OUTPUTS = [
     "claims_table.md",
     "sources.md",
     "handoff.json",
+    "image_prompts.md",
+    "x_posts.md",
 ]
 
 
@@ -68,6 +70,8 @@ Use the local files as the source of truth:
 - `CHECKS.md` for quality gates
 - `LOOPS.md` for the generation workflow
 - `topics/*/brief.yml` for each article request
+- `topics/*/output/image_prompts.md` for cover and section image generation prompts
+- `topics/*/output/x_posts.md` for draft X posts
 
 Agents may draft and revise local files. They must not publish, post, email, or change a CMS without explicit human approval.
 """
@@ -76,36 +80,64 @@ Agents may draft and revise local files. They must not publish, post, email, or 
 def template_style() -> str:
     return """# STYLE
 
-## Default Voice
+## いとぱんスタイル
 
-- Clear, useful, and grounded.
-- Prefer concrete examples over vague claims.
-- Keep facts, inference, opinion, and speculation separate.
-- Avoid hype, moralizing, and unsupported certainty.
+日本語のブログ記事は、いとぱんスタイルで書く。
 
-## Article Structure
+- 初心者が「自分にもできそう」と感じるように、やさしく背中を押す。
+- 専門用語はかみ砕き、身近なたとえで理解を助ける。
+- 情報の正確性を保ちつつ、親しみやすさを両立する。
+- 一人称は `僕`、二人称は `あなた` を使う。
+- 文末は `だ。/である。` の言い切りを6割、`です/ます` を4割くらいで混ぜる。
+- `大丈夫`、`僕も最初は...`、`...じゃないか` など、不安をほどく言葉を自然に入れる。
+- 誇張、説教、根拠のない断定、作った自信は避ける。
 
-1. Hook: question, scene, problem, or direct promise.
-2. Context: why this matters now.
-3. Core explanation: definitions, steps, examples, tradeoffs.
-4. Evidence: sources, examples, and counterpoints.
-5. Practical close: next action, checklist, or decision frame.
+## リズム
 
-## Citation Rules
+- 1-2文で改行する。
+- 1段落は長くても4行以内にする。
+- 段落の間には必ず空行を入れる。
+- 長い説明は `###` 見出しで細かく区切る。
+- `つまり`、`要は`、`言い換えると` を使って定期的に噛み砕く。
 
-- Material claims need sources.
-- If web research is unavailable, mark research limitations in `research_pack.md`.
-- Do not invent citations or source titles.
-- Prefer primary sources, official docs, academic papers, and reputable reporting.
+## 記事構成
 
-## Risk Topics
+1. あいさつと導入: 共感、問題提起、最近知った話。
+2. 結論の一言: 要点を先に出す。
+3. たとえ話: 日常の具体物や場面で噛み砕く。
+4. 本編: ステップ、仕組み、分類で整理する。
+5. 深掘り: 具体例、表、反論、実践方法を入れる。
+6. 任意のつまずきや失敗談: 記事のトーンに合う場合だけ入れる。
+7. まとめ: 箇条書きと励ましで締める。
+8. CTA: 必要に応じてスキ、コメント、フォローを促す。
+9. 任意の P.S.: 次回予告や補足を書く。
 
-For health, finance, legal, politics, identity, religion, or safety topics:
+FAQ/Q&A は、brief で明示されない限り追加しない。
 
-- show multiple perspectives
-- reduce certainty
-- include scope limits
-- avoid personal diagnosis or prescriptive advice
+## 見出しと装飾
+
+- 絵文字は主に H2 見出しで使う。
+- 1記事で使う絵文字は3-6種類に抑える。
+- 絵文字の連打を区切り線や装飾として使わない。
+- タイトルの絵文字は0-1個まで。入れるなら末尾寄せを基本にする。
+- 比較は表、手順は番号付きリストで整理する。
+
+## 引用と出典
+
+- 重要な事実主張には出典を付ける。
+- Web 調査ができない場合は、`research_pack.md` に調査制約を明記する。
+- 引用、出典名、URL、統計を作らない。
+- 一次情報、公式ドキュメント、論文、信頼できる報道を優先する。
+- 本文中の出典表記は `（出典名）` のように簡潔に示す。
+
+## 高リスクなテーマ
+
+健康、金融、法律、政治、アイデンティティ、宗教、安全に関わるテーマでは:
+
+- 複数の見方を示す。
+- 断定を弱める。
+- 範囲と限界を明記する。
+- 個別診断や強い助言を避ける。
 """
 
 
@@ -120,6 +152,8 @@ def template_checks() -> str:
 - `output/claims_table.md`
 - `output/sources.md`
 - `output/handoff.json`
+- `output/image_prompts.md`
+- `output/x_posts.md`
 
 ## Quality Gates
 
@@ -129,6 +163,9 @@ def template_checks() -> str:
 - Sources are listed in `sources.md`.
 - Facts, inference, opinion, and speculation are not mixed.
 - Web research limitations are explicit when browsing is unavailable.
+- `image_prompts.md` includes title-image prompts for both 16:9 and 5:2.
+- Section illustration prompts do not ask for in-image text.
+- `x_posts.md` includes 5 single-post drafts, each intended to stay under 280 characters.
 
 ## External Actions
 
@@ -146,7 +183,7 @@ def template_loops() -> str:
 ## Article Generation
 
 ```text
-Brief -> Plan -> Research -> Draft -> Verify -> Package -> Stop
+Brief -> Plan -> Research -> Draft -> Verify -> Assets -> Package -> Stop
 ```
 
 1. Read `brief.yml`, `STYLE.md`, and `CHECKS.md`.
@@ -155,7 +192,12 @@ Brief -> Plan -> Research -> Draft -> Verify -> Package -> Stop
 4. Write `output/draft.md`.
 5. Write `output/claims_table.md` and `output/sources.md`.
 6. Write `output/handoff.json`.
-7. Run `blog-agent check --topic <topic>`.
+7. Write `output/image_prompts.md`:
+   - title image prompt for 16:9
+   - title image prompt for 5:2
+   - one no-text section illustration prompt per H2
+8. Write `output/x_posts.md` with 5 draft X posts.
+9. Run `blog-agent check --topic <topic>`.
 
 ## Stop Conditions
 
@@ -163,6 +205,7 @@ Brief -> Plan -> Research -> Draft -> Verify -> Package -> Stop
 - The topic is high-risk and sources are insufficient.
 - The user asks for publishing or external posting without explicit confirmation.
 - The article would require invented quotes, citations, links, or statistics.
+- Image generation is unavailable; keep complete prompts in `image_prompts.md` and stop.
 """
 
 
@@ -178,11 +221,12 @@ This is a Blog Agent Kit workspace for Codex.
 - Use `blog-agent prompt --topic <topic>` before drafting.
 - Use `blog-agent check --topic <topic>` before reporting completion.
 - Do not publish, post, email, update a CMS, or invent citations.
+- Draft image prompts and X posts locally; do not post to X or upload assets unless explicitly asked.
 - If browsing is unavailable, say so in `research_pack.md` and list verification queries.
 
 ## Default Prompt
 
-Find the newest topic under `topics/` with missing or incomplete outputs. Follow the brief and generate the required files under `output/`. Separate facts, inference, opinion, and speculation. Do not perform external actions.
+Find the newest topic under `topics/` with missing or incomplete outputs. Follow the brief and generate the required files under `output/`, including image prompts and X post drafts. Separate facts, inference, opinion, and speculation. Do not perform external actions.
 """
 
 
@@ -197,11 +241,12 @@ This is a Blog Agent Kit workspace for Claude Code and Claude Desktop scheduled 
 - Generate or revise local files only.
 - Run `blog-agent check --topic <topic>` before final status.
 - Do not publish, post, email, update a CMS, or invent citations.
+- Draft image prompts and X posts locally; do not post to X or upload assets unless explicitly asked.
 - Mark web research limitations explicitly when browsing is unavailable.
 
 ## Scheduled Task Prompt
 
-Find the newest incomplete topic under `topics/`. Generate or revise the required output files. Return a short status with completed files, warnings, and next human review actions. Do not perform external actions.
+Find the newest incomplete topic under `topics/`. Generate or revise the required output files, including image prompts and X post drafts. Return a short status with completed files, warnings, and next human review actions. Do not perform external actions.
 """
 
 
@@ -211,6 +256,8 @@ def template_next_actions() -> str:
 - Create a topic with `blog-agent new "Theme"`.
 - Ask Codex or Claude to generate the missing outputs.
 - Run `blog-agent check --topic topics/...`.
+- Generate title images from `output/image_prompts.md` when image tools are available.
+- Review `output/x_posts.md` before posting manually.
 - Review the draft before publishing anywhere.
 """
 
@@ -251,12 +298,16 @@ Write these files:
 - `output/claims_table.md`
 - `output/sources.md`
 - `output/handoff.json`
+- `output/image_prompts.md`
+- `output/x_posts.md`
 
 Rules:
 
 - Separate facts, inference, opinion, and speculation.
 - Cite material claims.
 - If browsing is unavailable, state that clearly in `research_pack.md`.
+- In `image_prompts.md`, include title-image prompts for both 16:9 and 5:2, plus one no-text illustration prompt per H2 section.
+- In `x_posts.md`, write 5 single-post drafts under 280 characters each: news hook, problem/solution, concrete example, caution, and question/CTA.
 - Do not invent citations, quotes, URLs, statistics, or publication status.
 - Do not publish, post, email, or update a CMS.
 """
@@ -339,13 +390,113 @@ def template_sources() -> str:
 """
 
 
+def template_image_prompts(theme: str) -> str:
+    return f"""# Image Prompts
+
+Theme: {theme}
+
+## Title Image Text
+
+TODO title text, preferably 2-3 short lines.
+
+## Style Direction
+
+- Mood: premium but approachable Japanese tech explainer.
+- Visuals: TODO.
+- Avoid: exact logos, watermarks, signatures, fake UI text, and unreadable gibberish.
+
+## Cover Prompt - 16:9
+
+```text
+Create a 16:9 blog title image.
+Article theme: {theme}
+Title text to render exactly:
+TODO
+
+Style direction:
+TODO
+
+Composition:
+TODO
+
+Constraints:
+No watermark. No signature. Do not reproduce official logos exactly.
+```
+
+## Cover Prompt - 5:2
+
+```text
+Create an exact 5:2 blog title banner.
+Article theme: {theme}
+Title text to render exactly:
+TODO
+
+Style direction:
+TODO
+
+Composition:
+TODO
+
+Constraints:
+No watermark. No signature. Do not reproduce official logos exactly.
+```
+
+## Section Illustration Prompts
+
+Use one prompt per H2 section. Section illustrations should not contain text.
+
+### Section 1
+
+```text
+Create a 16:9 no-text section illustration.
+Section title: TODO
+Section summary: TODO
+Style direction: match the title image.
+Constraints: no text, no watermark, no signature, no logos.
+```
+"""
+
+
+def template_x_posts() -> str:
+    return """# X Posts
+
+Draft 5 single posts. Keep each one under 280 characters.
+
+## 案1: ニュース/フック
+
+TODO
+
+## 案2: 問題提起
+
+TODO
+
+## 案3: 具体例
+
+TODO
+
+## 案4: 注意点
+
+TODO
+
+## 案5: 質問/CTA
+
+TODO
+"""
+
+
 def template_handoff(slug: str) -> str:
     payload = {
         "title": "TODO Title",
         "subtitle": "",
+        "title_image_text": "",
         "slug": slug,
         "summary": "",
         "sections": [],
+        "images": {
+            "title_aspect_ratios": ["16:9", "5:2"],
+            "section_illustrations": [],
+        },
+        "x_posts_file": "output/x_posts.md",
         "writer": "blog-agent-kit",
         "writer_version": "0.1.0",
     }
@@ -404,6 +555,8 @@ def new_topic(args: argparse.Namespace) -> int:
         topic / "output" / "claims_table.md": template_claims_table(),
         topic / "output" / "sources.md": template_sources(),
         topic / "output" / "handoff.json": template_handoff(slug),
+        topic / "output" / "image_prompts.md": template_image_prompts(args.theme),
+        topic / "output" / "x_posts.md": template_x_posts(),
     }
     created = []
     skipped = []
@@ -463,6 +616,16 @@ def count_markdown_table_rows(path: Path) -> int:
     return rows
 
 
+def count_x_post_drafts(path: Path) -> int:
+    if not path.exists():
+        return 0
+    count = 0
+    for line in read_text(path).splitlines():
+        if re.match(r"^\s*(?:#{1,3}\s*)?案\s*\d+", line):
+            count += 1
+    return count
+
+
 def topic_status(topic: Path) -> TopicStatus:
     topic = topic.resolve()
     output = topic / "output"
@@ -500,6 +663,18 @@ def topic_status(topic: Path) -> TopicStatus:
     source_rows = count_markdown_table_rows(output / "sources.md")
     if source_rows < 3:
         warnings.append("sources.md should include at least 3 source rows.")
+
+    image_prompts = output / "image_prompts.md"
+    if image_prompts.exists():
+        image_text = read_text(image_prompts)
+        if "16:9" not in image_text:
+            warnings.append("image_prompts.md should include a 16:9 title image prompt.")
+        if "5:2" not in image_text:
+            warnings.append("image_prompts.md should include a 5:2 title image prompt.")
+
+    x_post_count = count_x_post_drafts(output / "x_posts.md")
+    if x_post_count < 5:
+        warnings.append("x_posts.md should include 5 draft posts.")
 
     return TopicStatus(
         topic=str(topic),
@@ -589,6 +764,8 @@ def render_package(topic: Path) -> str:
         ("Draft", output / "draft.md"),
         ("Claims Table", output / "claims_table.md"),
         ("Sources", output / "sources.md"),
+        ("Image Prompts", output / "image_prompts.md"),
+        ("X Posts", output / "x_posts.md"),
     ]
     lines = [f"# Review Package - {topic.name}", ""]
     for heading, path in sections:

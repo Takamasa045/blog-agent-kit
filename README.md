@@ -5,7 +5,7 @@ Local-first blog article generation workspace for Codex and Claude.
 Blog Agent Kit gives AI coding agents a repeatable article pipeline:
 
 ```text
-brief -> outline -> research pack -> draft -> claims table -> sources -> handoff
+brief -> outline -> research pack -> draft -> claims table -> sources -> handoff -> image prompts -> X posts
 ```
 
 It does not require an LLM API, CMS, Discord, Slack, OpenClaw, or a VPS. Codex or Claude writes and revises the article inside local files; the CLI scaffolds topics and checks whether the required artifacts are complete enough to review.
@@ -23,6 +23,8 @@ output/draft.md
 output/claims_table.md
 output/sources.md
 output/handoff.json    # Structured metadata for downstream tools
+output/image_prompts.md # Cover and section illustration prompts
+output/x_posts.md       # Draft X posts for manual review
 ```
 
 ## Quick Start
@@ -47,7 +49,10 @@ PYTHONPATH=src python3 -m blog_agent_kit.cli new "My article theme" --root /tmp/
 Codex or Claude should:
 
 - read `brief.yml`, `STYLE.md`, `CHECKS.md`, and `LOOPS.md`
+- follow the generated Itopan-style `STYLE.md` for Japanese articles: short line breaks, beginner-friendly explanations, direct/polite ending mix, restrained emoji headings, and concrete metaphors
 - produce all required files under `output/`
+- prepare title-image prompts for both 16:9 and 5:2, plus no-text section illustration prompts
+- prepare 5 draft X posts, but never post them automatically
 - separate facts, inference, opinion, and speculation
 - cite sources for material claims
 - mark web research limitations explicitly when browsing is unavailable
@@ -75,7 +80,8 @@ Read this Blog Agent Kit workspace. Follow AGENTS.md or CLAUDE.md.
 Find the newest topic with incomplete outputs.
 Run blog-agent check and blog-agent prompt.
 If files are missing, generate or revise them locally.
-Do not publish, post, email, or invent citations.
+Include image prompts and X post drafts.
+Do not publish, post, email, upload assets, or invent citations.
 ```
 
 ## Development

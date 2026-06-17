@@ -1,9 +1,15 @@
 {
   "title": "TODO Title",
   "subtitle": "",
+  "title_image_text": "",
   "slug": "example",
   "summary": "",
   "sections": [],
+  "images": {
+    "title_aspect_ratios": ["16:9", "5:2"],
+    "section_illustrations": []
+  },
+  "x_posts_file": "output/x_posts.md",
   "writer": "blog-agent-kit",
   "writer_version": "0.1.0"
 }

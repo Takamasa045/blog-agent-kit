@@ -22,6 +22,10 @@ class CliTest(unittest.TestCase):
             root = Path(tmp) / "blog"
             self.assertEqual(run_silent(["init", "--root", str(root)]), 0)
             self.assertTrue((root / "STYLE.md").exists())
+            style = (root / "STYLE.md").read_text(encoding="utf-8")
+            self.assertIn("## いとぱんスタイル", style)
+            self.assertIn("一人称は `僕`", style)
+            self.assertIn("FAQ/Q&A は、brief で明示されない限り追加しない。", style)
 
             self.assertEqual(
                 run_silent(["new", "Example article", "--root", str(root), "--date", "2026-06-17"]),
@@ -30,6 +34,11 @@ class CliTest(unittest.TestCase):
             topic = root / "topics" / "2026-06-17_example-article"
             self.assertTrue((topic / "brief.yml").exists())
             self.assertTrue((topic / "output" / "draft.md").exists())
+            image_prompts = (topic / "output" / "image_prompts.md").read_text(encoding="utf-8")
+            self.assertIn("Cover Prompt - 16:9", image_prompts)
+            self.assertIn("Cover Prompt - 5:2", image_prompts)
+            x_posts = (topic / "output" / "x_posts.md").read_text(encoding="utf-8")
+            self.assertIn("案5: 質問/CTA", x_posts)
 
     def test_check_reports_todo_warnings(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -40,6 +49,8 @@ class CliTest(unittest.TestCase):
             status = cli.topic_status(topic)
             self.assertTrue(status.warnings)
             self.assertIn("draft.md still contains TODO.", status.warnings)
+            self.assertIn("image_prompts.md still contains TODO.", status.warnings)
+            self.assertIn("x_posts.md still contains TODO.", status.warnings)
 
     def test_title_mismatch_warning_disappears_when_fixed(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
