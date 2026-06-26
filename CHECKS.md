@@ -14,6 +14,12 @@
 - Required output files exist.
 - `draft.md` has an H1 title.
 - `handoff.json.title` matches the H1 title.
+- `outline.md` has a Reader Entry section with reader, problem, promise, and next step.
+- If a named writing style is specified, `draft.md` satisfies the concrete style requirements captured in the brief, such as required opening phrase, tone, and reader level.
+- For itopan-style Japanese note/blog articles, confirm the `itopan-style` skill was used, including article log review and style reference application.
+- For itopan-style Japanese note/blog articles, `draft.md` includes `どうも、いとぱんです。` near the opening and uses the expected short-paragraph, beginner-friendly tone.
+- If a target character count is specified, verify real body text length instead of raw Markdown length.
+- For itopan-style Japanese note/blog articles without a different user target, verify about 3000 real body characters.
 - Claims and sources are present.
 - Web research limitations are explicit when needed.
 - `image_prompts.md` includes title image prompts for both 16:9 and 5:2.

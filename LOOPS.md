@@ -20,11 +20,16 @@ Brief -> Plan -> Research -> Draft -> Verify -> Assets -> Package -> Stop
 
 1. Create a topic with `blog-agent new`.
 2. Ask Codex or Claude to follow the generated `agent-prompt.md`.
-3. Generate `output/image_prompts.md` with 16:9 and 5:2 title-image prompts, plus no-text section illustration prompts.
-4. Generate `output/x_posts.md` with 5 draft X posts for manual review.
-5. Run `blog-agent check`.
-6. Fix warnings.
-7. Run `blog-agent package --write` for human review.
+3. Define the Reader Entry in `output/outline.md`: reader, problem, promise,
+   article role, title hook, and next step.
+4. If a named style or target length is specified, add a style gate before drafting: required opening, tone, reader level, and real-body character target.
+   For itopan-style Japanese note/blog articles, use the `itopan-style` skill before drafting, including its article log and style reference reads. Include `どうも、いとぱんです。` and target about 3000 real body characters unless the user says otherwise.
+5. Generate `output/image_prompts.md` with 16:9 and 5:2 title-image prompts, plus no-text section illustration prompts.
+6. Generate `output/x_posts.md` with 5 draft X posts for manual review.
+7. Run `blog-agent check`.
+8. Verify style-specific gates separately when they are outside `blog-agent check`, including real-body character count.
+9. Fix warnings and style-gate misses.
+10. Run `blog-agent package --write` for human review.
 
 ## Stop Conditions
 
