@@ -13,6 +13,7 @@ OpenClaw
 
 Local Mac
   -> tmp/pull-vps-artifacts.sh <run-id> で成果物だけ回収する
+  -> 必要なら scripts/install-auto-pull-launch-agent.sh で定期回収する
 
 Hermes
   -> 回収済み成果物を read-only で読む
@@ -119,6 +120,8 @@ sh tmp/pull-vps-artifacts.sh <run-id>
 ```text
 output/remote-artifacts/<run-id>/
 ```
+
+自動回収を設定済みの場合は、OpenClaw が `output/artifacts/<run-id>/` に成果物を置いたあと、次回の定期pullで `output/remote-artifacts/<run-id>/` に反映されます。自動回収は SSH/rsync のみで、LLMトークンや投稿処理は発生しません。
 
 ## Hermes が読む成果物ルール
 

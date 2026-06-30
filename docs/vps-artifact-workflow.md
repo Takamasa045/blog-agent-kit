@@ -72,6 +72,32 @@ sh scripts/pull-remote-artifacts.sh \
 
 この script は、記事、画像、音声、動画、ZIP、JSON、Markdown、text、CSV 系だけをコピーします。`--delete` は使わないため、ローカル成果物を消しません。
 
+## ローカルで自動回収する
+
+ローカル Mac で `tmp/vps-artifacts.env` を用意すると、VPS 側の `output/artifacts/` 全体を定期的に回収できます。
+
+```bash
+cat > tmp/vps-artifacts.env <<'EOF'
+BLOG_AGENT_VPS_TARGET="user@host.example"
+BLOG_AGENT_REMOTE_REPO="/home/user/blog-agent-kit"
+BLOG_AGENT_LOCAL_ARTIFACT_ROOT="output/remote-artifacts"
+EOF
+```
+
+手動確認:
+
+```bash
+sh scripts/auto-pull-vps-artifacts.sh
+```
+
+macOS の LaunchAgent として 30 分ごとに動かす場合:
+
+```bash
+sh scripts/install-auto-pull-launch-agent.sh 1800
+```
+
+自動回収も `rsync --delete` は使いません。LLM、Discord 投稿、CMS 更新は行わず、SSH/rsync で成果物ファイルを取りに行くだけです。
+
 ## やらないこと
 
 - VPS からローカル repo を直接マウントして編集しない。
