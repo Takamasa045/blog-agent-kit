@@ -1,6 +1,10 @@
 theme: "Example article theme"
 audience: "general readers"
 goal: "explain the topic clearly and help readers take the next step"
+reader_problem: ""
+reader_level: "beginner-friendly unless the brief says otherwise"
+article_role: "practical guide"
+next_step: ""
 tone: "clear and grounded"
 length: "1200-1800 words"
 must_include:

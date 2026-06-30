@@ -30,6 +30,9 @@ REQUIRED_TOPIC_OUTPUTS = [
     "handoff.json",
     "image_prompts.md",
     "x_posts.md",
+    "review_round_1.md",
+    "review_round_2.md",
+    "iteration_log.md",
 ]
 
 
@@ -103,6 +106,7 @@ def observe() -> dict[str, Any]:
             "PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'",
             "PYTHONPATH=src python3 -m blog_agent_kit.cli init --root /tmp/blog-demo --force",
             'PYTHONPATH=src python3 -m blog_agent_kit.cli new "Example article" --root /tmp/blog-demo --date 2026-06-17',
+            "PYTHONPATH=src python3 -m blog_agent_kit.cli review-prompt --topic /tmp/blog-demo/topics/2026-06-17_example-article",
             "PYTHONPATH=src python3 -m blog_agent_kit.cli check --topic /tmp/blog-demo/topics/2026-06-17_example-article",
         ],
     }

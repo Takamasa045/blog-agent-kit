@@ -20,6 +20,9 @@ REQUIRED_OUTPUTS = [
     "handoff.json",
     "image_prompts.md",
     "x_posts.md",
+    "review_round_1.md",
+    "review_round_2.md",
+    "iteration_log.md",
 ]
 
 
@@ -72,6 +75,7 @@ Use the local files as the source of truth:
 - `topics/*/brief.yml` for each article request
 - `topics/*/output/image_prompts.md` for cover and section image generation prompts
 - `topics/*/output/x_posts.md` for draft X posts
+- `topics/*/reviewer-prompt.md` for a second-agent review and brush-up pass
 
 Agents may draft and revise local files. They must not publish, post, email, or change a CMS without explicit human approval.
 """
@@ -99,6 +103,13 @@ def template_style() -> str:
 - 段落の間には必ず空行を入れる。
 - 長い説明は `###` 見出しで細かく区切る。
 - `つまり`、`要は`、`言い換えると` を使って定期的に噛み砕く。
+
+## 読者入口
+
+- タイトルと冒頭は、読者の困りごと、得たい変化、または「何それ？」と思う体験から入る。
+- 専門用語や内部プロジェクト名を先頭に置くときは、先に「誰に何が役立つか」を添える。
+- 1記事では主役を1つ選ぶ: 初心者向け実用、実験/制作過程、思想/世界観。
+- 導入からCTAまで、読者が次に取れる行動をつなげる。
 
 ## 記事構成
 
@@ -154,11 +165,15 @@ def template_checks() -> str:
 - `output/handoff.json`
 - `output/image_prompts.md`
 - `output/x_posts.md`
+- `output/review_round_1.md`
+- `output/review_round_2.md`
+- `output/iteration_log.md`
 
 ## Quality Gates
 
 - The draft starts with one `# Title`.
 - `handoff.json.title` matches the draft title.
+- `outline.md` includes a Reader Entry section with reader, problem, promise, and next step.
 - Major claims appear in `claims_table.md`.
 - Sources are listed in `sources.md`.
 - Facts, inference, opinion, and speculation are not mixed.
@@ -166,6 +181,8 @@ def template_checks() -> str:
 - `image_prompts.md` includes title-image prompts for both 16:9 and 5:2.
 - Section illustration prompts do not ask for in-image text.
 - `x_posts.md` includes 5 single-post drafts, each intended to stay under 280 characters.
+- `review_round_1.md` and `review_round_2.md` capture independent review findings.
+- `iteration_log.md` records what changed after each review round.
 
 ## External Actions
 
@@ -183,11 +200,11 @@ def template_loops() -> str:
 ## Article Generation
 
 ```text
-Brief -> Plan -> Research -> Draft -> Verify -> Assets -> Package -> Stop
+Brief -> Plan -> Research -> Draft -> Verify -> Assets -> Review -> Package -> Stop
 ```
 
 1. Read `brief.yml`, `STYLE.md`, and `CHECKS.md`.
-2. Write `output/outline.md` with title candidates and section plan.
+2. Write `output/outline.md` with Reader Entry, title candidates, and section plan.
 3. Write `output/research_pack.md` with terms, evidence, open questions, and search queries.
 4. Write `output/draft.md`.
 5. Write `output/claims_table.md` and `output/sources.md`.
@@ -197,7 +214,23 @@ Brief -> Plan -> Research -> Draft -> Verify -> Assets -> Package -> Stop
    - title image prompt for 5:2
    - one no-text section illustration prompt per H2
 8. Write `output/x_posts.md` with 5 draft X posts.
-9. Run `blog-agent check --topic <topic>`.
+9. Hand off to the review agent with `blog-agent review-prompt --topic <topic>`.
+
+## Review And Brush-up
+
+```text
+DISCOVER -> PLAN -> EXECUTE -> VERIFY -> ITERATE
+```
+
+Run this loop twice after the first complete draft.
+
+1. DISCOVER: Read the brief and current outputs. Identify the weakest reader, structure, style, source, and CTA issues.
+2. PLAN: Choose the smallest concrete fixes for this round.
+3. EXECUTE: Revise local output files only.
+4. VERIFY: Recheck the draft against `CHECKS.md`, style gates, sources, and handoff metadata.
+5. ITERATE: Record findings in `output/review_round_1.md` or `output/review_round_2.md`, and record applied changes in `output/iteration_log.md`.
+
+After round 2, run `blog-agent check --topic <topic>`, then `blog-agent package --topic <topic> --write`.
 
 ## Stop Conditions
 
@@ -219,14 +252,16 @@ This is a Blog Agent Kit workspace for Codex.
 - Read `STYLE.md`, `CHECKS.md`, `LOOPS.md`, and the topic `brief.yml`.
 - Generate or revise local files only.
 - Use `blog-agent prompt --topic <topic>` before drafting.
+- Use `blog-agent review-prompt --topic <topic>` for the second-agent review loop.
 - Use `blog-agent check --topic <topic>` before reporting completion.
+- In `output/outline.md`, define reader, problem, promise, and next step before drafting.
 - Do not publish, post, email, update a CMS, or invent citations.
 - Draft image prompts and X posts locally; do not post to X or upload assets unless explicitly asked.
 - If browsing is unavailable, say so in `research_pack.md` and list verification queries.
 
 ## Default Prompt
 
-Find the newest topic under `topics/` with missing or incomplete outputs. Follow the brief and generate the required files under `output/`, including image prompts and X post drafts. Separate facts, inference, opinion, and speculation. Do not perform external actions.
+Find the newest topic under `topics/` with missing or incomplete outputs. Follow the brief and generate the required files under `output/`, including image prompts, X post drafts, and two local review rounds. Separate facts, inference, opinion, and speculation. Do not perform external actions.
 """
 
 
@@ -239,14 +274,16 @@ This is a Blog Agent Kit workspace for Claude Code and Claude Desktop scheduled 
 
 - Read `STYLE.md`, `CHECKS.md`, `LOOPS.md`, and the topic `brief.yml`.
 - Generate or revise local files only.
+- Use `blog-agent review-prompt --topic <topic>` for the second-agent review loop.
 - Run `blog-agent check --topic <topic>` before final status.
+- In `output/outline.md`, define reader, problem, promise, and next step before drafting.
 - Do not publish, post, email, update a CMS, or invent citations.
 - Draft image prompts and X posts locally; do not post to X or upload assets unless explicitly asked.
 - Mark web research limitations explicitly when browsing is unavailable.
 
 ## Scheduled Task Prompt
 
-Find the newest incomplete topic under `topics/`. Generate or revise the required output files, including image prompts and X post drafts. Return a short status with completed files, warnings, and next human review actions. Do not perform external actions.
+Find the newest incomplete topic under `topics/`. Generate or revise the required output files, including image prompts, X post drafts, and two local review rounds. Return a short status with completed files, warnings, and next human review actions. Do not perform external actions.
 """
 
 
@@ -255,6 +292,7 @@ def template_next_actions() -> str:
 
 - Create a topic with `blog-agent new "Theme"`.
 - Ask Codex or Claude to generate the missing outputs.
+- Ask a second agent to run `blog-agent review-prompt --topic topics/...` and complete two brush-up rounds.
 - Run `blog-agent check --topic topics/...`.
 - Generate title images from `output/image_prompts.md` when image tools are available.
 - Review `output/x_posts.md` before posting manually.
@@ -266,6 +304,10 @@ def template_brief(theme: str, audience: str, goal: str, tone: str, length: str)
     return f"""theme: "{theme}"
 audience: "{audience}"
 goal: "{goal}"
+reader_problem: ""
+reader_level: "beginner-friendly unless the brief says otherwise"
+article_role: "practical guide"
+next_step: ""
 tone: "{tone}"
 length: "{length}"
 must_include:
@@ -305,11 +347,55 @@ Rules:
 
 - Separate facts, inference, opinion, and speculation.
 - Cite material claims.
+- In `output/outline.md`, start with a Reader Entry section: reader, problem, promise, article role, title hook, and next step.
+- Lead titles and openings from reader problem/value or a concrete story before jargon or internal tool names.
+- Choose one article role: practical guide, experiment story, or worldview essay; keep the CTA aligned.
 - If browsing is unavailable, state that clearly in `research_pack.md`.
 - In `image_prompts.md`, include title-image prompts for both 16:9 and 5:2, plus one no-text illustration prompt per H2 section.
 - In `x_posts.md`, write 5 single-post drafts under 280 characters each: news hook, problem/solution, concrete example, caution, and question/CTA.
+- After the first complete draft, hand off to a second agent with `blog-agent review-prompt --topic <topic>` for two review and brush-up rounds.
 - Do not invent citations, quotes, URLs, statistics, or publication status.
 - Do not publish, post, email, or update a CMS.
+"""
+
+
+def template_reviewer_prompt(theme: str) -> str:
+    return f"""# Reviewer Prompt
+
+Review and brush up this Blog Agent Kit topic:
+
+> {theme}
+
+Act as a second agent. Read `brief.yml`, workspace `STYLE.md`, `CHECKS.md`,
+`LOOPS.md`, and the current files under `output/`.
+
+Run exactly two local improvement rounds:
+
+```text
+DISCOVER -> PLAN -> EXECUTE -> VERIFY -> ITERATE
+```
+
+For each round:
+
+1. DISCOVER: identify weak points in reader fit, title/opening, structure, claims, sources, style, handoff metadata, image prompts, and X posts.
+2. PLAN: choose the smallest concrete set of fixes for this round.
+3. EXECUTE: revise local output files only.
+4. VERIFY: check the revised files against `CHECKS.md`, source limits, and the brief.
+5. ITERATE: write the review record and change summary.
+
+Write:
+
+- round 1 findings to `output/review_round_1.md`
+- round 2 findings to `output/review_round_2.md`
+- applied changes from both rounds to `output/iteration_log.md`
+
+Rules:
+
+- Do not publish, post, email, upload assets, or update a CMS.
+- Do not invent citations, quotes, URLs, statistics, or publication status.
+- If a claim cannot be verified, weaken it or mark the limitation.
+- Preserve useful previous work; only revise what improves the article.
+- After round 2, run `blog-agent check --topic <topic>`, then `blog-agent package --topic <topic> --write`.
 """
 
 
@@ -317,6 +403,15 @@ def template_outline(theme: str) -> str:
     return f"""# Outline
 
 Theme: {theme}
+
+## Reader Entry
+
+- Reader: TODO
+- Problem: TODO
+- Promise: TODO
+- Article role: TODO practical guide / experiment story / worldview essay
+- Title hook: TODO
+- Next step: TODO
 
 ## Title Candidates
 
@@ -484,6 +579,56 @@ TODO
 """
 
 
+def template_review_round(round_number: int) -> str:
+    return f"""# Review Round {round_number}
+
+## DISCOVER
+
+- Reader fit: TODO
+- Title/opening: TODO
+- Structure: TODO
+- Claims/sources: TODO
+- Style/tone: TODO
+- Handoff/assets/X posts: TODO
+
+## PLAN
+
+1. TODO
+
+## EXECUTE
+
+- Files to revise: TODO
+
+## VERIFY
+
+- Check result: TODO
+- Remaining blockers: TODO
+
+## ITERATE
+
+- Apply now: TODO
+- Carry forward: TODO
+"""
+
+
+def template_iteration_log() -> str:
+    return """# Iteration Log
+
+## Round 1 Changes
+
+- TODO
+
+## Round 2 Changes
+
+- TODO
+
+## Final Review State
+
+- `blog-agent check` result: TODO
+- Human review needed before publishing: yes
+"""
+
+
 def template_handoff(slug: str) -> str:
     payload = {
         "title": "TODO Title",
@@ -549,6 +694,7 @@ def new_topic(args: argparse.Namespace) -> int:
             args.length,
         ),
         topic / "agent-prompt.md": template_agent_prompt(args.theme),
+        topic / "reviewer-prompt.md": template_reviewer_prompt(args.theme),
         topic / "output" / "outline.md": template_outline(args.theme),
         topic / "output" / "research_pack.md": template_research_pack(),
         topic / "output" / "draft.md": template_draft(),
@@ -557,6 +703,9 @@ def new_topic(args: argparse.Namespace) -> int:
         topic / "output" / "handoff.json": template_handoff(slug),
         topic / "output" / "image_prompts.md": template_image_prompts(args.theme),
         topic / "output" / "x_posts.md": template_x_posts(),
+        topic / "output" / "review_round_1.md": template_review_round(1),
+        topic / "output" / "review_round_2.md": template_review_round(2),
+        topic / "output" / "iteration_log.md": template_iteration_log(),
     }
     created = []
     skipped = []
@@ -626,6 +775,20 @@ def count_x_post_drafts(path: Path) -> int:
     return count
 
 
+def has_reader_entry(text: str) -> bool:
+    lowered = text.lower()
+    combined = f"{lowered}\n{text}"
+    if "reader entry" not in lowered and "読者入口" not in text:
+        return False
+    required_groups = [
+        ("reader", "読者"),
+        ("problem", "悩み", "課題"),
+        ("promise", "約束", "得られる"),
+        ("next step", "next action", "次"),
+    ]
+    return all(any(token in combined for token in group) for group in required_groups)
+
+
 def topic_status(topic: Path) -> TopicStatus:
     topic = topic.resolve()
     output = topic / "output"
@@ -646,6 +809,15 @@ def topic_status(topic: Path) -> TopicStatus:
                 warnings.append(f"{path.name} still contains TODO.")
     else:
         warnings.append("output directory is missing.")
+
+    outline_path = output / "outline.md"
+    if outline_path.exists():
+        outline_text = read_text(outline_path)
+        if "TODO" not in outline_text and not has_reader_entry(outline_text):
+            warnings.append(
+                "outline.md should include a Reader Entry section with reader, "
+                "problem, promise, and next step."
+            )
 
     title = draft_title(topic)
     handoff = handoff_title(topic)
@@ -742,6 +914,23 @@ def command_prompt(args: argparse.Namespace) -> int:
     return 0
 
 
+def command_review_prompt(args: argparse.Namespace) -> int:
+    topic = resolve_topic(args)
+    parts = []
+    brief_path = topic / "brief.yml"
+    if brief_path.exists():
+        parts.append(read_text(brief_path))
+
+    reviewer_prompt_path = topic / "reviewer-prompt.md"
+    if reviewer_prompt_path.exists():
+        parts.append(read_text(reviewer_prompt_path))
+    else:
+        parts.append(template_reviewer_prompt(topic.name))
+
+    print("\n\n---\n\n".join(parts))
+    return 0
+
+
 def command_status(args: argparse.Namespace) -> int:
     root = Path(args.root).resolve()
     topics_dir = root / "topics"
@@ -766,6 +955,9 @@ def render_package(topic: Path) -> str:
         ("Sources", output / "sources.md"),
         ("Image Prompts", output / "image_prompts.md"),
         ("X Posts", output / "x_posts.md"),
+        ("Review Round 1", output / "review_round_1.md"),
+        ("Review Round 2", output / "review_round_2.md"),
+        ("Iteration Log", output / "iteration_log.md"),
     ]
     lines = [f"# Review Package - {topic.name}", ""]
     for heading, path in sections:
@@ -824,6 +1016,7 @@ def build_parser() -> argparse.ArgumentParser:
     for name, help_text, func in [
         ("check", "Check one topic", command_check),
         ("prompt", "Print the generation prompt for one topic", command_prompt),
+        ("review-prompt", "Print the second-agent review prompt for one topic", command_review_prompt),
         ("package", "Render a review package for one topic", command_package),
     ]:
         command = subparsers.add_parser(name, help=help_text)

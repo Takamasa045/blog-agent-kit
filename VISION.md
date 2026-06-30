@@ -6,7 +6,7 @@ It helps Codex, Claude, and similar agents create reviewable article artifacts
 inside local files:
 
 ```text
-brief -> outline -> research pack -> draft -> claims table -> sources -> handoff -> image prompts -> X posts
+brief -> outline -> research pack -> draft -> claims table -> sources -> handoff -> image prompts -> X posts -> review rounds -> iteration log
 ```
 
 ## Mission
@@ -21,6 +21,8 @@ brief -> outline -> research pack -> draft -> claims table -> sources -> handoff
 - This repository is the template and CLI source of truth.
 - Generated article workspaces use their own local files as the article truth.
 - Topic output files are review artifacts, not publication events.
+- Review and brush-up loops are local file edits plus review notes, not
+  autonomous publishing.
 - `README.md`, `AGENTS.md`, `CLAUDE.md`, `CHECKS.md`, `LOOPS.md`,
   `MEMORY.md`, and `NEXT_ACTIONS.md` are the operating surface for agents.
 

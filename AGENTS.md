@@ -22,6 +22,7 @@ This repository is a local template and CLI for blog article generation workspac
 - For itopan-style Japanese note/blog articles, use the `itopan-style` skill first. Apply its required read order, article log, opening phrase, tone, short paragraph rhythm, and real-body character target. Default to `どうも、いとぱんです。` near the opening and about 3000 real body characters unless the user gives a different target.
 - For article topics, prepare local image-generation prompts for 16:9 and 5:2 title images, plus no-text section illustrations.
 - Draft X posts locally in `output/x_posts.md`; do not post them or assume an account connection.
+- After article generation, use a separate reviewer prompt for two local brush-up rounds. Record `output/review_round_1.md`, `output/review_round_2.md`, and `output/iteration_log.md`.
 
 ## Verification
 
@@ -30,6 +31,7 @@ python3 scripts/observe_truth.py --json
 PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'
 PYTHONPATH=src python3 -m blog_agent_kit.cli init --root /tmp/blog-demo --force
 PYTHONPATH=src python3 -m blog_agent_kit.cli new "Example article" --root /tmp/blog-demo --date 2026-06-17
+PYTHONPATH=src python3 -m blog_agent_kit.cli review-prompt --topic /tmp/blog-demo/topics/2026-06-17_example-article
 PYTHONPATH=src python3 -m blog_agent_kit.cli check --topic /tmp/blog-demo/topics/2026-06-17_example-article
 ```
 
@@ -38,6 +40,7 @@ PYTHONPATH=src python3 -m blog_agent_kit.cli check --topic /tmp/blog-demo/topics
 - `blog-agent init`
 - `blog-agent new`
 - `blog-agent prompt`
+- `blog-agent review-prompt`
 - `blog-agent check`
 - `blog-agent status`
 - `blog-agent package`

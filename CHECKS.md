@@ -4,6 +4,7 @@
 
 - CLI commands work without third-party dependencies.
 - `python3 scripts/observe_truth.py --json` works.
+- `blog-agent review-prompt` prints the second-agent review prompt.
 - Agent operating files exist: `VISION.md`, `AGENTS.md`, `CLAUDE.md`, `CHECKS.md`, `LOOPS.md`, `MEMORY.md`, and `NEXT_ACTIONS.md`.
 - Templates do not include private style, private paths, or service assumptions.
 - Tests pass with `unittest`.
@@ -25,6 +26,9 @@
 - `image_prompts.md` includes title image prompts for both 16:9 and 5:2.
 - Section illustration prompts avoid in-image text.
 - `x_posts.md` includes 5 draft posts for manual review.
+- `review_round_1.md` and `review_round_2.md` record independent review findings.
+- `iteration_log.md` records changes applied after both brush-up rounds.
+- Review loops stay local-only and do not claim publication.
 
 ## External Actions
 

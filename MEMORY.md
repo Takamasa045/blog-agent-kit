@@ -12,11 +12,17 @@ free of private topics, private paths, secrets, tokens, or customer data.
 - The article artifact chain is:
 
 ```text
-brief -> outline -> research pack -> draft -> claims table -> sources -> handoff -> image prompts -> X posts
+brief -> outline -> research pack -> draft -> claims table -> sources -> handoff -> image prompts -> X posts -> review rounds -> iteration log
 ```
 
 - Material claims need sources. If current web research is unavailable, the
   limitation must be stated in the article artifacts.
+- Article outlines should define the reader entry before drafting: reader,
+  problem, promise, article role, title hook, and next step.
+- Article topics should run two local review/brush-up rounds after the first
+  complete draft. Use a second-agent prompt, record findings in
+  `review_round_1.md` and `review_round_2.md`, and record applied changes in
+  `iteration_log.md`.
 - The project should stay dependency-free unless a concrete feature requires a
   dependency and the benefit is larger than the maintenance cost.
 - Docs must describe repeatable workflows, not private operational habits.
@@ -29,3 +35,13 @@ Goal -> Observe -> Plan -> Act -> Verify -> Record -> Stop
 
 Use `scripts/observe_truth.py` for the observe step when working in this repo.
 Record durable decisions here only when they should guide future agents.
+
+## Article Review Loop
+
+```text
+DISCOVER -> PLAN -> EXECUTE -> VERIFY -> ITERATE
+```
+
+Run the article review loop twice after generation. Keep the loop local-only:
+the reviewer agent may edit topic files and write review notes, but must not
+publish, post, email, upload, or update a CMS.

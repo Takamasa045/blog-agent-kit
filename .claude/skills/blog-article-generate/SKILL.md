@@ -24,6 +24,22 @@ blog-agent prompt --topic <topic>
 - `output/claims_table.md`
 - `output/sources.md`
 - `output/handoff.json`
+- `output/image_prompts.md`
+- `output/x_posts.md`
+- `output/review_round_1.md`
+- `output/review_round_2.md`
+- `output/iteration_log.md`
+
+Before drafting, make sure `output/outline.md` includes a Reader Entry:
+reader, problem, promise, article role, title hook, and next step.
+
+After the first complete draft, use:
+
+```bash
+blog-agent review-prompt --topic <topic>
+```
+
+Run two local review and brush-up rounds before final completion.
 
 4. Run:
 
@@ -39,5 +55,6 @@ blog-agent check --topic <topic>
 - Do not post to social media.
 - Do not email.
 - Do not update a CMS.
+- Do not lead with jargon or internal tool names unless the reader problem and value are clear first.
 - Do not invent citations, quotes, URLs, statistics, or publication status.
 - If browsing is unavailable, state that limitation in `research_pack.md`.

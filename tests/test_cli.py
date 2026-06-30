@@ -26,6 +26,7 @@ class CliTest(unittest.TestCase):
             self.assertIn("## いとぱんスタイル", style)
             self.assertIn("一人称は `僕`", style)
             self.assertIn("FAQ/Q&A は、brief で明示されない限り追加しない。", style)
+            self.assertIn("## 読者入口", style)
 
             self.assertEqual(
                 run_silent(["new", "Example article", "--root", str(root), "--date", "2026-06-17"]),
@@ -34,11 +35,24 @@ class CliTest(unittest.TestCase):
             topic = root / "topics" / "2026-06-17_example-article"
             self.assertTrue((topic / "brief.yml").exists())
             self.assertTrue((topic / "output" / "draft.md").exists())
+            brief = (topic / "brief.yml").read_text(encoding="utf-8")
+            self.assertIn("reader_problem:", brief)
+            outline = (topic / "output" / "outline.md").read_text(encoding="utf-8")
+            self.assertIn("## Reader Entry", outline)
+            self.assertIn("- Problem: TODO", outline)
+            agent_prompt = (topic / "agent-prompt.md").read_text(encoding="utf-8")
+            self.assertIn("Reader Entry", agent_prompt)
+            reviewer_prompt = (topic / "reviewer-prompt.md").read_text(encoding="utf-8")
+            self.assertIn("DISCOVER -> PLAN -> EXECUTE -> VERIFY -> ITERATE", reviewer_prompt)
             image_prompts = (topic / "output" / "image_prompts.md").read_text(encoding="utf-8")
             self.assertIn("Cover Prompt - 16:9", image_prompts)
             self.assertIn("Cover Prompt - 5:2", image_prompts)
             x_posts = (topic / "output" / "x_posts.md").read_text(encoding="utf-8")
             self.assertIn("案5: 質問/CTA", x_posts)
+            review_round = (topic / "output" / "review_round_1.md").read_text(encoding="utf-8")
+            self.assertIn("# Review Round 1", review_round)
+            iteration_log = (topic / "output" / "iteration_log.md").read_text(encoding="utf-8")
+            self.assertIn("## Round 2 Changes", iteration_log)
 
     def test_check_reports_todo_warnings(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -51,6 +65,58 @@ class CliTest(unittest.TestCase):
             self.assertIn("draft.md still contains TODO.", status.warnings)
             self.assertIn("image_prompts.md still contains TODO.", status.warnings)
             self.assertIn("x_posts.md still contains TODO.", status.warnings)
+            self.assertIn("review_round_1.md still contains TODO.", status.warnings)
+            self.assertIn("iteration_log.md still contains TODO.", status.warnings)
+
+    def test_review_prompt_command_prints_second_agent_prompt(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "blog"
+            run_silent(["init", "--root", str(root)])
+            run_silent(["new", "Example article", "--root", str(root), "--date", "2026-06-17"])
+            topic = root / "topics" / "2026-06-17_example-article"
+
+            buffer = StringIO()
+            with redirect_stdout(buffer):
+                self.assertEqual(cli.main(["review-prompt", "--topic", str(topic)]), 0)
+
+            prompt = buffer.getvalue()
+            self.assertIn("Reviewer Prompt", prompt)
+            self.assertIn("two local improvement rounds", prompt)
+
+    def test_review_prompt_command_handles_legacy_topic_without_prompt_file(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "blog"
+            run_silent(["init", "--root", str(root)])
+            run_silent(["new", "Example article", "--root", str(root), "--date", "2026-06-17"])
+            topic = root / "topics" / "2026-06-17_example-article"
+            (topic / "reviewer-prompt.md").unlink()
+
+            buffer = StringIO()
+            with redirect_stdout(buffer):
+                self.assertEqual(cli.main(["review-prompt", "--topic", str(topic)]), 0)
+
+            prompt = buffer.getvalue()
+            self.assertIn("Reviewer Prompt", prompt)
+            self.assertIn("DISCOVER -> PLAN -> EXECUTE -> VERIFY -> ITERATE", prompt)
+
+    def test_check_warns_when_completed_outline_missing_reader_entry(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "blog"
+            run_silent(["init", "--root", str(root)])
+            run_silent(["new", "Example article", "--root", str(root), "--date", "2026-06-17"])
+            topic = root / "topics" / "2026-06-17_example-article"
+            output = topic / "output"
+            (output / "outline.md").write_text(
+                "# Outline\n\n## Title Candidates\n\n1. Useful title\n",
+                encoding="utf-8",
+            )
+
+            status = cli.topic_status(topic)
+            self.assertIn(
+                "outline.md should include a Reader Entry section with reader, "
+                "problem, promise, and next step.",
+                status.warnings,
+            )
 
     def test_title_mismatch_warning_disappears_when_fixed(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
