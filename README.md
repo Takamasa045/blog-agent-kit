@@ -99,6 +99,8 @@ Do not publish, post, email, upload assets, or invent citations.
 
 基本は、GitHub 経由で VPS 上に clone を作り、VPS 側の `output/artifacts/<run-id>/` に成果物を出し、ローカル側から `scripts/pull-remote-artifacts.sh` で `output/remote-artifacts/<run-id>/` へ回収します。
 
+OpenClaw に記事作成を頼み、Hermes が回収済み成果物を read-only で読む場合は `docs/openclaw-hermes-operations.md` を使います。
+
 ## Development
 
 ```bash
