@@ -101,6 +101,21 @@ Do not publish, post, email, upload assets, or invent citations.
 
 OpenClaw に記事作成を頼み、Hermes が回収済み成果物を read-only で読む場合は `docs/openclaw-hermes-operations.md` を使います。
 
+
+OpenClaw can also use the local article loop as an optional orchestrator. See
+`docs/openclaw-integration.md` and `examples/openclaw-prompt.md` for a runbook
+that creates or continues a topic, runs checks, writes a review package, and
+stops before any external action.
+
+To pull a completed OpenClaw topic back to this machine:
+
+```bash
+blog-agent sync --source host:/path/to/blog-agent-kit --topic latest --root .
+```
+
+Use `--dry-run` first to preview changes, and `--force` only when the remote
+topic should replace local copies.
+
 ## Development
 
 ```bash

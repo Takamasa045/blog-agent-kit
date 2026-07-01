@@ -8,4 +8,6 @@
 - Choose a public GitHub repository name.
 - Add optional presets for tutorial, opinion, comparison, review, and research essay.
 - Add import/export adapters only after the local article loop is stable.
+- Keep OpenClaw support as an optional local orchestration recipe, not a CLI dependency.
+- Use `blog-agent sync --source <host:/path>` when pulling OpenClaw-generated topics back to local review.
 - Keep CMS publishing out of the default package.

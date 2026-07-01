@@ -133,6 +133,43 @@ class CliTest(unittest.TestCase):
             status = cli.topic_status(topic)
             self.assertNotIn("handoff.json title does not match draft.md H1.", status.warnings)
 
+    def test_sync_latest_topic_without_overwriting_existing_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "source"
+            destination = Path(tmp) / "destination"
+            run_silent(["init", "--root", str(source)])
+            run_silent(["new", "Example article", "--root", str(source), "--date", "2026-06-17"])
+
+            source_topic = source / "topics" / "2026-06-17_example-article"
+            (source_topic / "output" / "draft.md").write_text(
+                "# Remote Draft\n\nRemote body.\n",
+                encoding="utf-8",
+            )
+
+            self.assertEqual(
+                run_silent(["sync", "--source", str(source), "--root", str(destination)]),
+                0,
+            )
+            synced_draft = destination / "topics" / "2026-06-17_example-article" / "output" / "draft.md"
+            self.assertEqual(synced_draft.read_text(encoding="utf-8"), "# Remote Draft\n\nRemote body.\n")
+
+            synced_draft.write_text("# Local Draft\n\nKeep me.\n", encoding="utf-8")
+            (source_topic / "output" / "draft.md").write_text(
+                "# Remote Draft 2\n\nRemote body 2.\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(
+                run_silent(["sync", "--source", str(source), "--root", str(destination)]),
+                0,
+            )
+            self.assertEqual(synced_draft.read_text(encoding="utf-8"), "# Local Draft\n\nKeep me.\n")
+
+            self.assertEqual(
+                run_silent(["sync", "--source", str(source), "--root", str(destination), "--force"]),
+                0,
+            )
+            self.assertEqual(synced_draft.read_text(encoding="utf-8"), "# Remote Draft 2\n\nRemote body 2.\n")
+
 
 if __name__ == "__main__":
     unittest.main()

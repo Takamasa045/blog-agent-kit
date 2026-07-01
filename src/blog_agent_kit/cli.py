@@ -4,6 +4,9 @@ import argparse
 import hashlib
 import json
 import re
+import shlex
+import shutil
+import subprocess
 import unicodedata
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
@@ -34,6 +37,16 @@ class TopicStatus:
     missing_outputs: list[str]
     warnings: list[str]
     title: str | None = None
+
+
+@dataclass
+class SyncTopicResult:
+    topic: str
+    destination: str
+    source: str
+    mode: str
+    changed: list[str]
+    skipped_existing: list[str]
 
 
 def today() -> str:
@@ -866,6 +879,120 @@ def latest_topic(root: Path) -> Path | None:
     return topics[-1] if topics else None
 
 
+def is_remote_spec(source: str) -> bool:
+    if source.startswith("/") or source.startswith("./") or source.startswith("../"):
+        return False
+    if re.match(r"^[A-Za-z]:[\\/]", source):
+        return False
+    return ":" in source
+
+
+def split_remote_spec(source: str) -> tuple[str, str]:
+    if not is_remote_spec(source):
+        raise ValueError(f"Not a remote source: {source}")
+    host, remote_path = source.split(":", 1)
+    if not host or not remote_path:
+        raise ValueError("Remote source must look like host:/path/to/workspace")
+    return host, remote_path.rstrip("/")
+
+
+def topic_names_from_local_source(source: Path) -> list[str]:
+    topics_dir = source / "topics"
+    if not topics_dir.exists():
+        return []
+    return sorted(path.name for path in topics_dir.iterdir() if path.is_dir())
+
+
+def topic_names_from_remote_source(source: str) -> list[str]:
+    host, remote_path = split_remote_spec(source)
+    remote_topics = f"{remote_path}/topics"
+    script = (
+        f"for d in {shlex.quote(remote_topics)}/*; do "
+        '[ -d "$d" ] && basename "$d"; '
+        "done"
+    )
+    result = subprocess.run(
+        ["ssh", host, script],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return sorted(line.strip() for line in result.stdout.splitlines() if line.strip())
+
+
+def select_sync_topics(source: str, topic: str) -> list[str]:
+    topics = (
+        topic_names_from_remote_source(source)
+        if is_remote_spec(source)
+        else topic_names_from_local_source(Path(source).resolve())
+    )
+    if topic == "all":
+        return topics
+    if topic == "latest":
+        if not topics:
+            raise SystemExit(f"No topics found in source: {source}")
+        return [topics[-1]]
+    if topic not in topics:
+        raise SystemExit(f"Topic not found in source: {topic}")
+    return [topic]
+
+
+def copy_local_topic(source_root: Path, topic: str, destination: Path, *, force: bool, dry_run: bool) -> SyncTopicResult:
+    source_topic = source_root / "topics" / topic
+    changed: list[str] = []
+    skipped_existing: list[str] = []
+    for source_file in sorted(path for path in source_topic.rglob("*") if path.is_file()):
+        relative = source_file.relative_to(source_topic)
+        destination_file = destination / relative
+        if destination_file.exists() and not force:
+            skipped_existing.append(relative.as_posix())
+            continue
+        changed.append(relative.as_posix())
+        if dry_run:
+            continue
+        destination_file.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source_file, destination_file)
+    return SyncTopicResult(
+        topic=topic,
+        destination=str(destination),
+        source=str(source_topic),
+        mode="local-copy",
+        changed=changed,
+        skipped_existing=skipped_existing,
+    )
+
+
+def copy_remote_topic(source: str, topic: str, destination: Path, *, force: bool, dry_run: bool) -> SyncTopicResult:
+    if shutil.which("rsync") is None:
+        raise SystemExit("rsync is required for remote sync.")
+    source_topic = f"{source.rstrip('/')}/topics/{topic}/"
+    if not dry_run:
+        destination.mkdir(parents=True, exist_ok=True)
+    command = ["rsync", "-a", "--checksum", "--itemize-changes"]
+    if dry_run:
+        command.append("--dry-run")
+    if not force:
+        command.append("--ignore-existing")
+    command.extend([source_topic, f"{destination}/"])
+    result = subprocess.run(command, check=True, capture_output=True, text=True)
+    changed: list[str] = []
+    skipped_existing: list[str] = []
+    for line in result.stdout.splitlines():
+        if not line or line.endswith("/"):
+            continue
+        parts = line.split(maxsplit=1)
+        if len(parts) == 2:
+            changed.append(parts[1])
+    return SyncTopicResult(
+        topic=topic,
+        destination=str(destination),
+        source=source_topic.rstrip("/"),
+        mode="remote-rsync",
+        changed=changed,
+        skipped_existing=skipped_existing,
+    )
+
+
 def resolve_topic(args: argparse.Namespace) -> Path:
     if args.topic:
         return Path(args.topic).resolve()
@@ -945,6 +1072,51 @@ def command_status(args: argparse.Namespace) -> int:
         warning_count = len(item.warnings) + len(item.missing_outputs)
         print(f"{Path(item.topic).name}: {warning_count} issue(s)")
     return 1 if args.strict and any(item.warnings or item.missing_outputs for item in statuses) else 0
+
+
+def command_sync(args: argparse.Namespace) -> int:
+    root = Path(args.root).resolve()
+    topics = select_sync_topics(args.source, args.topic)
+    results: list[SyncTopicResult] = []
+    for topic in topics:
+        destination = root / "topics" / topic
+        if is_remote_spec(args.source):
+            result = copy_remote_topic(
+                args.source,
+                topic,
+                destination,
+                force=args.force,
+                dry_run=args.dry_run,
+            )
+        else:
+            result = copy_local_topic(
+                Path(args.source).resolve(),
+                topic,
+                destination,
+                force=args.force,
+                dry_run=args.dry_run,
+            )
+        results.append(result)
+
+    payload = {
+        "source": args.source,
+        "root": str(root),
+        "topic_selector": args.topic,
+        "force": args.force,
+        "dry_run": args.dry_run,
+        "topics": [asdict(item) for item in results],
+    }
+    if args.json:
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+        return 0
+
+    for item in results:
+        print(f"Synced topic: {item.topic}")
+        print(f"Destination: {item.destination}")
+        print(f"Changed files: {len(item.changed)}")
+        if item.skipped_existing:
+            print(f"Skipped existing files: {len(item.skipped_existing)}")
+    return 0
 
 
 def render_package(topic: Path) -> str:
@@ -1034,6 +1206,19 @@ def build_parser() -> argparse.ArgumentParser:
     status.add_argument("--json", action="store_true")
     status.add_argument("--strict", action="store_true")
     status.set_defaults(func=command_status)
+
+    sync = subparsers.add_parser("sync", help="Pull topics from another Blog Agent Kit workspace")
+    sync.add_argument(
+        "--source",
+        required=True,
+        help="Source workspace root. Use a local path or SSH spec like host:/path/to/workspace.",
+    )
+    sync.add_argument("--root", default=".")
+    sync.add_argument("--topic", default="latest", help="Topic name, latest, or all")
+    sync.add_argument("--force", action="store_true", help="Overwrite existing local files")
+    sync.add_argument("--dry-run", action="store_true", help="Show what would be copied")
+    sync.add_argument("--json", action="store_true")
+    sync.set_defaults(func=command_sync)
 
     return parser
 
